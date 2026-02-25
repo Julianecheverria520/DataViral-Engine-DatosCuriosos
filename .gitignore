@@ -1,0 +1,17 @@
+# Entorno virtual
+venv/
+.env
+
+# Carpetas de datos y resultados (pesadas)
+proyectos/
+output/
+
+# Archivos temporales de Python y Video
+__pycache__/
+*.pyc
+temp-audio.m4a
+*.mp4
+
+# VS Code u otros editores
+.vscode/
+.idea/
