@@ -6,96 +6,142 @@ from dotenv import load_dotenv
 load_dotenv()
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def obtener_guion_y_prompts_visuales(tema, segundos=30):
-    print(f"🧠 INGENIERÍA DE RETENCIÓN ACTIVADA: {tema} ({segundos}s)")
 
-    # ----------------------------
-    # DENSIDAD SEGÚN DURACIÓN
-    # ----------------------------
-    if segundos <= 45:
+def obtener_guion_y_prompts_visuales(tema, segundos=30, modo="normal", canal="misterio"):
+
+    print(f"🧠 MOTOR VIRAL ACTIVADO | MODO: {modo.upper()} | CANAL: {canal.upper()} | {tema} ({segundos}s)")
+
+    # -------------------------------------------------
+    # CÁLCULO REAL DE DURACIÓN (≈150 palabras/min)
+    # -------------------------------------------------
+    palabras_objetivo = int(segundos * 2.5)
+
+    # Distribución inteligente de escenas
+    if segundos <= 30:
         num_escenas = 5
-        palabras_por_escena = "10 a 14"
-    elif segundos <= 90:
+    elif segundos <= 45:
+        num_escenas = 7
+    elif segundos <= 60:
         num_escenas = 8
-        palabras_por_escena = "14 a 18"
+    elif segundos <= 90:
+        num_escenas = 10
     else:
         num_escenas = 12
-        palabras_por_escena = "18 a 24"
 
+    palabras_por_escena_aprox = int(palabras_objetivo / num_escenas)
+
+    # -------------------------------------------------
+    # LÓGICA DE CANAL
+    # -------------------------------------------------
+    if canal.lower() == "deportes":
+        reglas_canal = """
+        ESTILO DEPORTIVO ANALÍTICO PROFESIONAL:
+
+        - SOLO usar datos reales y verificables.
+        - NO inventar estadísticas.
+        - NO inventar récords.
+        - Si no estás 100% seguro del dato, habla en términos generales sin números específicos.
+        - Evitar fechas exactas si no se conocen con certeza.
+        - No exagerar.
+        - Tono de comentarista deportivo serio.
+        - Enfocar en rendimiento, comparaciones históricas reales y contexto deportivo auténtico.
+        - Prohibido crear jugadores, torneos o cifras falsas.
+        """
+    else:
+        reglas_canal = """
+        ESTILO MISTERIO / IMPACTO:
+
+        - Tono intrigante o impactante.
+        - Escalada progresiva.
+        - No parecer artículo de Wikipedia.
+        - Mantener tensión narrativa.
+        """
+
+    # -------------------------------------------------
+    # MODO AGRESIVO
+    # -------------------------------------------------
+    if modo.lower() == "agresivo":
+        reglas_tono = f"""
+        MODO AGRESIVO ACTIVADO:
+
+        OBJETIVO:
+        Confrontar al espectador directamente.
+        Generar incomodidad y fricción.
+
+        REGLAS:
+
+        - Usar segunda persona en varias escenas.
+        - Cada escena debe empeorar la anterior.
+        - Incluir consecuencias claras.
+        - No usar signos de interrogación.
+        - No usar metáforas poéticas.
+        - No narración externa.
+        - Final debe atacar identidad o forzar decisión directa.
+        - Máximo {palabras_por_escena_aprox + 2} palabras por escena.
+        """
+    else:
+        reglas_tono = f"""
+        MODO NORMAL:
+
+        - Tensión progresiva.
+        - Narración fluida.
+        - Mantener curiosidad.
+        - Aproximadamente {palabras_por_escena_aprox} palabras por escena.
+        """
+
+    # -------------------------------------------------
+    # PROMPT PRINCIPAL
+    # -------------------------------------------------
     prompt_sistema = f"""
-Eres un ARQUITECTO de retención viral para contenido vertical tipo TikTok.
+Eres un ARQUITECTO de retención viral para contenido vertical.
 
-Tu objetivo no es informar.
-Tu objetivo es RETENER.
+Tu objetivo:
+- Maximizar retención.
+- Mantener atención hasta el final.
+- Incentivar comentarios.
 
-IDENTIDAD DEL CANAL:
-- Misterioso
-- Oscuro
-- Serio
-- Impactante
-- Sensación de secreto revelado
-
-ESTRUCTURA DE TENSIÓN:
-
-ESCENA 1:
-Hook disruptivo.
-Advertencia o comparación extrema.
-Generar curiosidad inmediata.
-
-ESCENAS INTERMEDIAS:
-Escalada progresiva.
-Cada escena empeora la anterior.
-Crear micro-loops sin cerrar completamente la idea.
-
-CLÍMAX:
-Revelación fuerte.
-Impacto psicológico.
-
-FINAL:
-Pregunta o dilema que genere comentarios.
-
-CONFIGURACIÓN:
 Duración objetivo: {segundos} segundos.
-Número de escenas: {num_escenas}
-Extensión por escena: {palabras_por_escena}
+Total aproximado de palabras: {palabras_objetivo}.
+Número de escenas: {num_escenas}.
+Promedio palabras por escena: {palabras_por_escena_aprox}.
 
-REGLAS CRÍTICAS:
+{reglas_canal}
+{reglas_tono}
+
+ESTRUCTURA OBLIGATORIA:
+
+1) Hook inmediato.
+2) Desarrollo creciente.
+3) Punto de mayor tensión.
+4) Cierre fuerte.
 
 Cada escena debe tener EXACTAMENTE:
 - texto
-- palabra_clave (UNA sola palabra emocional potente)
+- palabra_clave (una palabra potente, no repetir)
 - prompt_imagen
 
-REGLAS PARA prompt_imagen (OBLIGATORIO):
+REGLAS PARA prompt_imagen:
 
-El prompt_imagen debe describir visualmente la escena con:
+Debe incluir:
+1. Tipo de plano
+2. Ubicación concreta
+3. Edad aproximada del personaje
+4. Emoción visible
+5. Acción específica
+6. Hora del día
+7. Ambiente o clima
+8. Sensación cinematográfica realista
 
-1) Tipo de plano (close-up, wide shot, aerial, medium shot, etc.)
-2) Ubicación específica (ciudad, interior, calle, edificio, etc.)
-3) Personaje con edad aproximada
-4) Emoción visible en el rostro o cuerpo
-5) Acción concreta en progreso
-6) Hora del día
-7) Ambiente/clima
-8) Sensación cinematográfica realista
-
-Debe ser altamente descriptivo.
-Debe ser generable por IA visual.
-No usar solo estilos como "dark cinematic lighting".
-No repetir exactamente la misma estructura entre escenas.
-No usar frases genéricas.
-
-TEXTO:
-- Frases cortas.
-- Ritmo alto.
-- No tono documental.
-- No explicaciones largas.
-- Sensación constante de escalada.
+Debe ser:
+- Generable por IA.
+- Diferente entre escenas.
+- No repetitivo.
+- No genérico.
 
 FORMATO JSON OBLIGATORIO:
 
 {{
-  "tipo_contenido": "Impacto/Misterio/Comparacion",
+  "tipo_contenido": "{canal}",
   "guion": [
     {{
       "escena": 1,
@@ -111,7 +157,7 @@ Devuelve solo JSON válido.
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": f"Tema: {tema}"}
@@ -121,7 +167,6 @@ Devuelve solo JSON válido.
 
         data = json.loads(response.choices[0].message.content)
 
-        # Validación básica
         if "guion" not in data:
             raise ValueError("JSON sin guion")
 

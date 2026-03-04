@@ -44,7 +44,7 @@ def limpiar_texto_etiquetas(texto):
 # ==========================================================
 # FASE 1: PREPARAR
 # ==========================================================
-def fase_preparar(tema, segundos):
+def fase_preparar(tema, segundos, modo, canal):
 
     os.makedirs(BASE_DIR, exist_ok=True)
 
@@ -55,9 +55,10 @@ def fase_preparar(tema, segundos):
     os.makedirs(path, exist_ok=True)
     os.makedirs(img_folder, exist_ok=True)
 
-    print(f"\n🚀 GENERANDO PROYECTO: {tema} ({segundos}s)")
+    print(f"\n🚀 GENERANDO PROYECTO: {tema} ({segundos}s) | MODO: {modo} | CANAL: {canal}")
 
-    datos = obtener_guion_y_prompts_visuales(tema, segundos)
+    # CAMBIO: Ahora enviamos el cuarto parámetro 'canal'
+    datos = obtener_guion_y_prompts_visuales(tema, segundos, modo=modo, canal=canal)
 
     if not datos or "guion" not in datos:
         print("❌ GPT no devolvió guion válido.")
@@ -74,7 +75,6 @@ def fase_preparar(tema, segundos):
     )
 
     audio_path = os.path.join(path, "audio.mp3")
-    # CORRECCIÓN: Definir y pasar ruta de timestamps
     timestamps_path = os.path.join(path, "timestamps.json")
     
     exito_voz = generar_voz(texto_completo, audio_path, timestamps_path)
@@ -118,7 +118,6 @@ def fase_montar():
         path_p = os.path.join(BASE_DIR, p)
         guion_p = os.path.join(path_p, "guion.json")
         audio_p = os.path.join(path_p, "audio.mp3")
-        # CORRECCIÓN: Referenciar el archivo de timestamps generado en Fase 1
         timestamps_p = os.path.join(path_p, "timestamps.json")
         img_f = os.path.join(path_p, "images")
         output_v = os.path.join(OUTPUT_DIR, f"{p}_Final.mp4")
@@ -128,7 +127,7 @@ def fase_montar():
             continue
 
         if not (os.path.exists(guion_p) and os.path.exists(audio_p) and os.path.exists(timestamps_p)):
-            print(f"⚠ Proyecto incompleto (falta audio, guion o timestamps): {p}")
+            print(f"⚠ Proyecto incompleto: {p}")
             continue
 
         print(f"\n🎬 MONTANDO: {p}")
@@ -164,7 +163,6 @@ def fase_montar():
         )
 
         try:
-            # CORRECCIÓN: Pasar timestamps_p como tercer argumento
             crear_video_pro_con_imagenes(
                 datos["guion"],
                 audio_p,
@@ -194,23 +192,21 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         print("\nUso:")
-        print("python main.py PREPARAR 'Tema' 45")
+        print("python main.py PREPARAR 'Tema' 45 'agresivo' 'misterio'")
         print("python main.py MONTAR")
-        print("python main.py STATS")
         sys.exit(0)
 
-    modo = sys.argv[1].upper()
+    modo_sistema = sys.argv[1].upper()
 
-    if modo == "PREPARAR":
+    if modo_sistema == "PREPARAR":
         tema = sys.argv[2] if len(sys.argv) > 2 else input("Tema: ")
         segundos = int(sys.argv[3]) if len(sys.argv) > 3 else 30
-        fase_preparar(tema, segundos)
+        modo_gpt = sys.argv[4] if len(sys.argv) > 4 else "normal" 
+        canal_gpt = sys.argv[5] if len(sys.argv) > 5 else "misterio"
+        fase_preparar(tema, segundos, modo_gpt, canal_gpt)
 
-    elif modo == "MONTAR":
+    elif modo_sistema == "MONTAR":
         fase_montar()
 
-    elif modo == "STATS":
+    elif modo_sistema == "STATS":
         fase_estadisticas()
-
-    else:
-        print("❌ Comando no reconocido.")
