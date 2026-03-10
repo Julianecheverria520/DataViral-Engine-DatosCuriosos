@@ -1,71 +1,101 @@
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
-from moviepy.editor import ImageClip
+from moviepy.editor import TextClip, CompositeVideoClip
+from PIL import ImageFont
+import textwrap
+
+FONT_PATH = "assets/fonts/Montserrat-Bold.ttf"  # Ajusta si usas otra
+FONT_SIZE = 90
+COLOR_NORMAL = "white"
+COLOR_ACTIVA = "yellow"
+STROKE_COLOR = "black"
+STROKE_WIDTH = 4
+
+MAX_WIDTH_RATIO = 0.85  # 85% del ancho del video
 
 
-def crear_texto_clip(
-    texto,
-    ancho=1080,
-    alto=1920,
-    tamaño_fuente=90,
-    color_texto="white",
-    color_fondo=(0, 0, 0, 180),
-    duracion=5
-):
-    # Crear imagen RGBA transparente
-    img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+def dividir_en_bloques(timestamps, max_palabras=6):
+    bloques = []
+    actual = []
 
-    try:
-        fuente = ImageFont.truetype("arial.ttf", tamaño_fuente)
-    except:
-        fuente = ImageFont.load_default()
+    for palabra in timestamps:
+        actual.append(palabra)
 
-    # Ajustar texto en múltiples líneas
-    margen = 100
-    max_ancho = ancho - margen * 2
+        if len(actual) >= max_palabras:
+            bloques.append(actual)
+            actual = []
 
-    lineas = []
-    palabras = texto.split()
-    linea_actual = ""
+    if actual:
+        bloques.append(actual)
 
-    for palabra in palabras:
-        test_linea = linea_actual + " " + palabra if linea_actual else palabra
-        bbox = draw.textbbox((0, 0), test_linea, font=fuente)
-        if bbox[2] - bbox[0] <= max_ancho:
-            linea_actual = test_linea
-        else:
-            lineas.append(linea_actual)
-            linea_actual = palabra
+    return bloques
 
-    if linea_actual:
-        lineas.append(linea_actual)
 
-    altura_total = 0
-    alturas = []
+def construir_linea(palabras):
+    return " ".join([p["palabra"] for p in palabras])
 
-    for linea in lineas:
-        bbox = draw.textbbox((0, 0), linea, font=fuente)
-        altura = bbox[3] - bbox[1]
-        alturas.append(altura)
-        altura_total += altura + 20
 
-    y_texto = (alto - altura_total) // 2
+def crear_subtitulos_karaoke(video, timestamps):
 
-    # Fondo semi-transparente
-    fondo = Image.new("RGBA", (ancho, alto), color_fondo)
-    img = Image.alpha_composite(img, fondo)
+    ancho_video = video.w
+    alto_video = video.h
+    max_width = int(ancho_video * MAX_WIDTH_RATIO)
 
-    for i, linea in enumerate(lineas):
-        bbox = draw.textbbox((0, 0), linea, font=fuente)
-        ancho_texto = bbox[2] - bbox[0]
+    bloques = dividir_en_bloques(timestamps, max_palabras=5)
 
-        x = (ancho - ancho_texto) // 2
+    clips = []
 
-        draw.text((x, y_texto), linea, font=fuente, fill=color_texto)
-        y_texto += alturas[i] + 20
+    for bloque in bloques:
 
-    np_img = np.array(img)
+        inicio_bloque = bloque[0]["inicio"]
+        fin_bloque = bloque[-1]["fin"]
 
-    clip = ImageClip(np_img).set_duration(duracion)
-    return clip
+        texto_completo = construir_linea(bloque)
+
+        # Clip base blanco
+        base = TextClip(
+            texto_completo,
+            fontsize=FONT_SIZE,
+            font=FONT_PATH,
+            color=COLOR_NORMAL,
+            stroke_color=STROKE_COLOR,
+            stroke_width=STROKE_WIDTH,
+            size=(max_width, None),
+            method="caption",
+        ).set_position(("center", alto_video * 0.75)).set_start(inicio_bloque).set_end(fin_bloque)
+
+        clips.append(base)
+
+        # Palabra activa
+        for palabra in bloque:
+
+            palabra_clip = TextClip(
+                texto_completo,
+                fontsize=FONT_SIZE,
+                font=FONT_PATH,
+                color=COLOR_NORMAL,
+                stroke_color=STROKE_COLOR,
+                stroke_width=STROKE_WIDTH,
+                size=(max_width, None),
+                method="caption",
+            )
+
+            texto_karaoke = ""
+
+            for p in bloque:
+                if p == palabra:
+                    texto_karaoke += f"<span foreground='{COLOR_ACTIVA}'>{p['palabra']}</span> "
+                else:
+                    texto_karaoke += p["palabra"] + " "
+
+            activa = TextClip(
+                texto_karaoke.strip(),
+                fontsize=FONT_SIZE,
+                font=FONT_PATH,
+                method="caption",
+                size=(max_width, None),
+            ).set_position(("center", alto_video * 0.75)) \
+             .set_start(palabra["inicio"]) \
+             .set_end(palabra["fin"])
+
+            clips.append(activa)
+
+    return CompositeVideoClip([video] + clips)

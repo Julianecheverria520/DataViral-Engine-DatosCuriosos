@@ -1,171 +1,145 @@
-from moviepy.editor import (
-    ImageClip,
-    AudioFileClip,
-    CompositeVideoClip,
-    VideoClip
-)
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 import json
+import os
+import re
+import sys
+import time
+import numpy as np
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, VideoClip, CompositeAudioClip, afx
+from moviepy.config import change_settings
 
-# ==============================
-# CONFIGURACIÓN
-# ==============================
+# ==========================================================
+# CONFIGURACIÓN DE RUTAS Y BINARIOS
+# ==========================================================
+# Ajusta esta ruta si tu FFmpeg está en otra ubicación
+FFMPEG_PATH = r"C:\ffmpeg\bin\ffmpeg.exe"
+if os.path.exists(FFMPEG_PATH):
+    change_settings({"FFMPEG_BINARY": FFMPEG_PATH})
 
+try:
+    # Importamos los efectos de texto y barra desde tu core
+    from core.efectos import crear_subtitulos_bloque, crear_barra_progreso
+except ImportError as e:
+    print(f"❌ Error crítico: No se pudo importar efectos.py. Detalle: {e}")
+    sys.exit(1)
+
+# Parámetros de Redes Sociales (Vertical 9:16)
 WIDTH = 1080
 HEIGHT = 1920
-FONT_PATH = "C:/Windows/Fonts/arialbd.ttf"
-FONT_SIZE = 120
-COLOR_TEXTO = (255, 255, 255)
+FPS = 30
 
-# ==============================
-# UTILIDADES
-# ==============================
+# ==========================================================
+# UTILIDADES DE SOPORTE
+# ==========================================================
+def obtener_numero_escena(filename):
+    """Extrae el índice de la imagen (img_0, img_1...) para ordenar el montaje."""
+    match = re.search(r'img_(\d+)', filename)
+    return int(match.group(1)) if match else 999
 
-def cargar_fuente(size):
+def limpiar_memoria_clips(clips):
+    """Cierra los clips para liberar RAM tras el renderizado."""
+    for clip in clips:
+        try:
+            clip.close()
+        except:
+            pass
+
+# ==========================================================
+# FUNCIÓN PRINCIPAL DE MONTAJE
+# ==========================================================
+def crear_video_pro_con_imagenes(datos_guion, audio_path, timestamps_path, lista_imagenes, output_path, musica_path=None):
+    inicio_proceso = time.time()
+    print(f"\n🎬 INICIANDO RENDER PROFESIONAL | InsightdataMind")
+    
+    if not os.path.exists(audio_path):
+        print(f"❌ Error: No se encontró el archivo de voz en {audio_path}")
+        return False
+
     try:
-        return ImageFont.truetype(FONT_PATH, size)
-    except:
-        return ImageFont.load_default()
+        # 1. CARGA Y PROCESAMIENTO DE AUDIO
+        audio_voz = AudioFileClip(audio_path)
+        duracion_total = audio_voz.duration
 
+        # Mezcla con música de fondo si se proporciona
+        if musica_path and os.path.exists(musica_path):
+            print(f"   🎵 Mezclando atmósfera musical: {os.path.basename(musica_path)}")
+            audio_fondo = AudioFileClip(musica_path)
+            
+            # Loop automático si la música es más corta que el video
+            if audio_fondo.duration < duracion_total:
+                audio_fondo = audio_fondo.fx(afx.audio_loop, duration=duracion_total)
+            else:
+                audio_fondo = audio_fondo.subclip(0, duracion_total)
+            
+            # Ajuste de volumen (0.08 - 0.10 es ideal para que la voz resalte)
+            audio_fondo = audio_fondo.volumex(0.08).audio_fadeout(2)
+            audio_final = CompositeAudioClip([audio_voz, audio_fondo])
+        else:
+            audio_final = audio_voz
 
-# ==============================
-# SUBTÍTULOS PALABRA POR PALABRA
-# ==============================
+        elementos_video = []
 
-def crear_subtitulos_palabra(timestamps):
+        # 2. PROCESAMIENTO DE IMÁGENES CON ZOOM DINÁMICO
+        escenas_guion = datos_guion.get("guion", [])
+        num_escenas = len(escenas_guion)
+        
+        # Ordenamos las imágenes por su nombre (img_0, img_1...)
+        lista_imagenes.sort(key=obtener_numero_escena)
+        
+        # Calculamos la duración exacta por escena para sincronía perfecta
+        duracion_escena = duracion_total / len(lista_imagenes) if lista_imagenes else 0
 
-    font = cargar_fuente(FONT_SIZE)
-    clips = []
+        for i, img_path in enumerate(lista_imagenes):
+            if i >= num_escenas and num_escenas > 0: break
+            
+            start_t = i * duracion_escena
+            
+            # Creamos el clip de imagen con efecto Zoom (Ken Burns)
+            fondo = (
+                ImageClip(img_path)
+                .set_start(start_t)
+                .set_duration(duracion_escena)
+                .resize(height=HEIGHT) # Ajuste vertical
+                .set_position("center")
+                # Zoom suave del 100% al 106% durante la duración de la escena
+                .resize(lambda t: 1.0 + 0.06 * (t / duracion_escena))
+            )
+            elementos_video.append(fondo)
 
-    for p in timestamps:
+        # 3. CAPA DE SUBTÍTULOS (Sincronizados con el JSON corregido)
+        # Usamos 3 palabras por bloque para evitar que se amontonen o descuadren
+        print("   ✍️ Generando subtítulos dinámicos...")
+        subtitulos_clips = crear_subtitulos_bloque(timestamps_path, palabras_por_bloque=3)
+        if subtitulos_clips:
+            elementos_video.extend(subtitulos_clips)
 
-        palabra = p["palabra"].strip()
-        inicio = p["inicio"]
-        fin = p["fin"]
+        # 4. CAPA DE BARRA DE PROGRESO
+        barra = crear_barra_progreso(duracion_total)
+        elementos_video.append(barra)
 
-        duracion = fin - inicio
+        # 5. COMPOSICIÓN FINAL Y EXPORTACIÓN
+        video_final = CompositeVideoClip(elementos_video, size=(WIDTH, HEIGHT))
+        video_final = video_final.set_audio(audio_final).set_duration(duracion_total)
 
-        if duracion <= 0.02:
-            continue
-
-        # Crear imagen transparente
-        img = Image.new("RGBA", (WIDTH, 400), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-
-        bbox = draw.textbbox((0, 0), palabra, font=font)
-        w = bbox[2] - bbox[0]
-        h = bbox[3] - bbox[1]
-
-        x = (WIDTH - w) // 2
-        y = (400 - h) // 2
-
-        # Sombra para legibilidad
-        draw.text((x+4, y+4), palabra, font=font, fill=(0, 0, 0, 180))
-        draw.text((x, y), palabra, font=font, fill=COLOR_TEXTO)
-
-        np_img = np.array(img)
-
-        clip = (
-            ImageClip(np_img)
-            .set_start(inicio)
-            .set_duration(duracion)
-            .set_position(("center", HEIGHT * 0.75))
+        print(f"   🚀 Exportando a: {output_path}")
+        video_final.write_videofile(
+            output_path,
+            fps=FPS,
+            codec="libx264",
+            audio_codec="aac",
+            temp_audiofile="temp-audio.m4a",
+            remove_temp=True,
+            threads=8,
+            preset="medium" # Cambia a "ultrafast" para pruebas rápidas
         )
 
-        clips.append(clip)
+        # Limpieza de recursos
+        audio_final.close()
+        video_final.close()
+        limpiar_memoria_clips(elementos_video)
+        
+        print(f"⭐ PROCESO FINALIZADO EXITOSAMENTE EN {time.time() - inicio_proceso:.2f}s")
+        return True
 
-    return clips
-
-
-# ==============================
-# BARRA DE PROGRESO
-# ==============================
-
-def crear_barra_progreso(duracion_total):
-
-    def frame(t):
-        progreso = min(t / duracion_total, 1)
-        ancho = int(WIDTH * progreso)
-        img = np.zeros((12, WIDTH, 3), dtype=np.uint8)
-        img[:, :ancho] = [0, 240, 255]
-        return img
-
-    return VideoClip(frame, duration=duracion_total).set_position((0, HEIGHT - 20))
-
-
-# ==============================
-# RENDER FINAL
-# ==============================
-
-def crear_video_pro_con_imagenes(
-    datos_guion,
-    audio_path,
-    timestamps_path,
-    lista_imagenes,
-    output_path
-):
-
-    audio = AudioFileClip(audio_path)
-    dur_total = audio.duration
-
-    with open(timestamps_path, "r", encoding="utf-8") as f:
-        timestamps = json.load(f)
-
-    elementos = []
-
-    # ==============================
-    # FONDOS
-    # ==============================
-
-    num_escenas = len(datos_guion)
-    dur_escena = dur_total / max(num_escenas, 1)
-
-    for i, img_path in enumerate(lista_imagenes):
-        if i >= num_escenas:
-            break
-
-        clip_img = (
-            ImageClip(img_path)
-            .set_start(i * dur_escena)
-            .set_duration(dur_escena)
-            .resize(height=HEIGHT)
-            .set_position("center")
-        )
-
-        elementos.append(clip_img)
-
-    # ==============================
-    # SUBTÍTULOS EXACTOS
-    # ==============================
-
-    subs = crear_subtitulos_palabra(timestamps)
-    elementos.extend(subs)
-
-    # ==============================
-    # BARRA
-    # ==============================
-
-    elementos.append(crear_barra_progreso(dur_total))
-
-    # ==============================
-    # MONTAJE FINAL
-    # ==============================
-
-    final = CompositeVideoClip(elementos, size=(WIDTH, HEIGHT))
-    final = final.set_duration(dur_total).set_audio(audio)
-
-    print("🎬 Renderizando video con palabra exacta sincronizada...")
-
-    final.write_videofile(
-        output_path,
-        fps=30,
-        codec="libx264",
-        audio_codec="aac",
-        audio_fps=44100,   # 🔥 CLAVE para evitar drift
-        threads=6,
-        preset="fast",
-    )
-
-    audio.close()
-    final.close()
+    except Exception as e:
+        print(f"❌ ERROR CRÍTICO EN VIDEO_EDITOR: {e}")
+        return False

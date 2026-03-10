@@ -2,211 +2,195 @@ import json
 import os
 import sys
 import re
+import time
+import random
+from core.limpieza_engine import limpiar_texto_para_tts, insertar_pausas_inteligentes
 
 # ==========================================================
 # CONFIGURACIÓN GLOBAL
 # ==========================================================
 os.environ["IMAGEIO_FFMPEG_EXE"] = r"C:\ffmpeg\bin\ffmpeg.exe"
-
 BASE_DIR = "proyectos"
 OUTPUT_DIR = os.path.join("output", "videos")
+MUSIC_DIR = "assets/music" 
 
-# ==========================================================
-# PROTOCOLO DE CONEXIÓN DE MÓDULOS
-# ==========================================================
 ruta_raiz = os.path.dirname(os.path.abspath(__file__))
-ruta_core = os.path.join(ruta_raiz, "core")
-
 if ruta_raiz not in sys.path:
     sys.path.insert(0, ruta_raiz)
 
-if ruta_core not in sys.path:
-    sys.path.insert(0, ruta_core)
-
 try:
     from core.gpt_engine import obtener_guion_y_prompts_visuales
+    from core.auditor_engine import auditar_guion
+    from core.hooks_engine import generar_hook_controlado
     from core.voice_engine import generar_voz
-    from core.image_engine import generar_imagen
     from core.video_editor import crear_video_pro_con_imagenes
 except Exception as e:
-    print(f"❌ Error importando módulos: {e}")
-    sys.exit(1)
+    print(f"❌ Error importando módulos core: {e}"); sys.exit(1)
 
 # ==========================================================
 # UTILIDADES
 # ==========================================================
+def obtener_musica_por_canal(canal):
+    folder = os.path.join(MUSIC_DIR, canal.lower())
+    if os.path.exists(folder):
+        archivos = [f for f in os.listdir(folder) if f.endswith(".mp3")]
+        if archivos:
+            return os.path.join(folder, random.choice(archivos))
+    return None
+
 def limpiar_nombre_carpeta(nombre):
     return re.sub(r'[\\/*?:"<>|]', "", nombre).strip().replace(' ', '_')
 
-def limpiar_texto_etiquetas(texto):
-    return re.sub(r'\[.*?\]', '', texto).strip()
+def extraer_indice(ruta):
+    match = re.search(r'img_(\d+)', ruta)
+    return int(match.group(1)) if match else 9999
 
 # ==========================================================
 # FASE 1: PREPARAR
 # ==========================================================
-def fase_preparar(tema, segundos, modo, canal):
+def fase_preparar(tema_original, segundos, modo, canal):
+    print(f"\n🧠 --- INICIANDO PREPARACIÓN: {tema_original} ---")
+    hook_maestro = generar_hook_controlado(tema_original, canal)
+    
+    intentos_max = 3
+    intento_actual = 0
+    guion_aprobado = False
+    datos_finales = None
+    instruccion_extra = "" 
 
-    os.makedirs(BASE_DIR, exist_ok=True)
+    while not guion_aprobado and intento_actual < intentos_max:
+        intento_actual += 1
+        datos_temp, hook_real = obtener_guion_y_prompts_visuales(
+            tema_original, segundos, modo, canal, 
+            hook_externo=hook_maestro, feedback=instruccion_extra
+        )
+        if not datos_temp: continue
 
-    tema_limpio = limpiar_nombre_carpeta(tema[:40])
-    path = os.path.join(BASE_DIR, f"{tema_limpio}_{segundos}s")
-    img_folder = os.path.join(path, "images")
+        revision = auditar_guion(datos_temp, tema_original, hook_real)
+        if revision.get("aprobado"):
+            datos_finales = datos_temp
+            guion_aprobado = True
+        else:
+            instruccion_extra = revision.get("mejora")
+            print(f"⚠️ Intento {intento_actual} rechazado: {revision.get('razon')}")
 
-    os.makedirs(path, exist_ok=True)
-    os.makedirs(img_folder, exist_ok=True)
-
-    print(f"\n🚀 GENERANDO PROYECTO: {tema} ({segundos}s) | MODO: {modo} | CANAL: {canal}")
-
-    # CAMBIO: Ahora enviamos el cuarto parámetro 'canal'
-    datos = obtener_guion_y_prompts_visuales(tema, segundos, modo=modo, canal=canal)
-
-    if not datos or "guion" not in datos:
-        print("❌ GPT no devolvió guion válido.")
+    if not datos_finales:
+        print("❌ No se pudo generar un guion que cumpla los requisitos.")
         return
 
-    # Guardar guion
-    guion_path = os.path.join(path, "guion.json")
-    with open(guion_path, "w", encoding="utf-8") as f:
-        json.dump(datos, f, indent=4, ensure_ascii=False)
+    tema_limpio = limpiar_nombre_carpeta(tema_original[:40])
+    path = os.path.join(BASE_DIR, f"{tema_limpio}_{segundos}s")
+    os.makedirs(os.path.join(path, "images"), exist_ok=True)
 
-    # Generar audio + timestamps
-    texto_completo = " ".join(
-        limpiar_texto_etiquetas(e["texto"]) for e in datos["guion"]
-    )
+    datos_finales["canal_meta"] = canal
 
     audio_path = os.path.join(path, "audio.mp3")
     timestamps_path = os.path.join(path, "timestamps.json")
     
-    exito_voz = generar_voz(texto_completo, audio_path, timestamps_path)
+    escenas = datos_finales["guion"]
+    texto_para_voz = " ".join([
+        insertar_pausas_inteligentes(limpiar_texto_para_tts(e["texto"]), i == len(escenas)-1) 
+        for i, e in enumerate(escenas)
+    ])
 
-    if not exito_voz:
-        print("❌ Fallo generando audio.")
+    conteo_p = len(texto_para_voz.split())
+    print(f"🎙️ Palabras finales: {conteo_p} | Estimación: {conteo_p/2.2:.1f} segundos.")
+
+    generar_voz(texto_para_voz, audio_path, timestamps_path)
+
+    with open(os.path.join(path, "guion.json"), "w", encoding="utf-8") as f:
+        json.dump(datos_finales, f, indent=4, ensure_ascii=False)
+
+    info_path = os.path.join(path, "info_publicacion.txt")
+    titulo_redes = datos_finales.get("titulo_redes", tema_original)
+    tags = " ".join(datos_finales.get("hashtags", ["#viral", "#insightdatamind"]))
+    
+    with open(info_path, "w", encoding="utf-8") as f:
+        f.write(f"PROYECTO: {tema_original}\n")
+        f.write(f"DURACIÓN: {segundos}s\n")
+        f.write("-" * 30 + "\n")
+        f.write(f"TITULO PARA REDES:\n{titulo_redes}\n\n")
+        f.write(f"HASHTAGS:\n{tags}\n")
+
+    print(f"✅ PROYECTO LISTO: {path}")
+
+# ==========================================================
+# FASE ESPECIAL: RE-HACER AUDIO (SOLO VOZ Y TIMESTAMPS)
+# ==========================================================
+def fase_reconstruir_audio(nombre_proyecto):
+    """Vuelve a generar el audio.mp3 y timestamps.json usando el guion.json existente."""
+    path = os.path.join(BASE_DIR, nombre_proyecto)
+    guion_path = os.path.join(path, "guion.json")
+
+    if not os.path.exists(guion_path):
+        print(f"❌ Error: No existe guion.json en {path}")
         return
 
-    # Generar imágenes
-    for idx, escena in enumerate(datos["guion"]):
-        img_path = os.path.join(img_folder, f"img_{idx}.png")
+    print(f"🎙️ RE-PROCESANDO VOZ PARA: {nombre_proyecto}")
+    with open(guion_path, "r", encoding="utf-8") as f:
+        datos = json.load(f)
 
-        if not os.path.exists(img_path):
-            print(f"🎨 Generando imagen {idx+1}/{len(datos['guion'])}")
-            generar_imagen(escena["prompt_imagen"], img_path)
+    texto_para_voz = ""
+    escenas = datos["guion"]
+    for i, escena in enumerate(escenas):
+        t_limpio = limpiar_texto_para_tts(escena["texto"])
+        es_ultima = (i == len(escenas) - 1)
+        texto_para_voz += insertar_pausas_inteligentes(t_limpio, es_ultima=es_ultima) + " "
 
-    print(f"\n✅ PROYECTO LISTO EN: {path}")
+    audio_path = os.path.join(path, "audio.mp3")
+    timestamps_path = os.path.join(path, "timestamps.json")
+
+    # Limpieza de archivos previos
+    if os.path.exists(audio_path): os.remove(audio_path)
+    if os.path.exists(timestamps_path): os.remove(timestamps_path)
+
+    generar_voz(texto_para_voz.strip(), audio_path, timestamps_path)
+    print(f"✅ Audio y Timestamps reconstruidos exitosamente.")
 
 # ==========================================================
 # FASE 2: MONTAR
 # ==========================================================
 def fase_montar():
-
-    if not os.path.exists(BASE_DIR):
-        print("❌ No existe la carpeta proyectos.")
-        return
-
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    proyectos = [
-        d for d in os.listdir(BASE_DIR)
-        if os.path.isdir(os.path.join(BASE_DIR, d))
-    ]
-
-    if not proyectos:
-        print("⚠ No hay proyectos para montar.")
-        return
-
+    if not os.path.exists(BASE_DIR): return
+    proyectos = [d for d in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, d))]
+    
     for p in proyectos:
-
         path_p = os.path.join(BASE_DIR, p)
         guion_p = os.path.join(path_p, "guion.json")
         audio_p = os.path.join(path_p, "audio.mp3")
-        timestamps_p = os.path.join(path_p, "timestamps.json")
         img_f = os.path.join(path_p, "images")
         output_v = os.path.join(OUTPUT_DIR, f"{p}_Final.mp4")
 
-        if os.path.exists(output_v):
-            print(f"⏩ Saltando {p} (ya renderizado)")
-            continue
-
-        if not (os.path.exists(guion_p) and os.path.exists(audio_p) and os.path.exists(timestamps_p)):
-            print(f"⚠ Proyecto incompleto: {p}")
-            continue
-
-        print(f"\n🎬 MONTANDO: {p}")
+        if os.path.exists(output_v) or not os.path.exists(guion_p): continue
 
         with open(guion_p, "r", encoding="utf-8") as f:
-            datos = json.load(f)
+            datos_json = json.load(f)
 
-        if "guion" not in datos:
-            print("❌ Guion inválido.")
-            continue
+        canal_target = datos_json.get("canal_meta", "misterio")
+        musica_path = obtener_musica_por_canal(canal_target)
 
-        # Limpiar textos
-        for escena in datos["guion"]:
-            escena["texto"] = limpiar_texto_etiquetas(escena["texto"])
+        imagenes = [os.path.join(img_f, f) for f in os.listdir(img_f) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+        imagenes.sort(key=extraer_indice)
 
-        # Recolectar imágenes ordenadas
-        if not os.path.exists(img_f):
-            print("❌ Carpeta imágenes no encontrada.")
-            continue
-
-        imagenes = [
-            os.path.join(img_f, f)
-            for f in os.listdir(img_f)
-            if f.endswith(".png")
-        ]
-
-        if not imagenes:
-            print("❌ No hay imágenes.")
-            continue
-
-        imagenes.sort(
-            key=lambda x: int(re.search(r'img_(\d+)', x).group(1))
-        )
-
-        try:
+        if len(imagenes) >= len(datos_json["guion"]):
+            print(f"🎬 Montando video: {p}")
             crear_video_pro_con_imagenes(
-                datos["guion"],
-                audio_p,
-                timestamps_p,
-                imagenes,
-                output_v
+                datos_json, audio_p, os.path.join(path_p, "timestamps.json"), 
+                imagenes, output_v, musica_path=musica_path
             )
 
-            print(f"⭐ VIDEO GENERADO: {output_v}")
-
-        except Exception as e:
-            print(f"❌ Error montando {p}: {e}")
-
 # ==========================================================
-# FASE 3: STATS
-# ==========================================================
-def fase_estadisticas():
-    print("\n📊 ESTADO DEL MOTOR")
-    print("Sistema operativo")
-    print("Render engine activo")
-    print("Modo viral optimizado")
-
-# ==========================================================
-# ENTRY POINT
+# PUNTO DE ENTRADA
 # ==========================================================
 if __name__ == "__main__":
-
     if len(sys.argv) < 2:
-        print("\nUso:")
-        print("python main.py PREPARAR 'Tema' 45 'agresivo' 'misterio'")
-        print("python main.py MONTAR")
+        print("Uso: python main.py [PREPARAR | MONTAR | REHACER_AUDIO]")
         sys.exit(0)
-
-    modo_sistema = sys.argv[1].upper()
-
-    if modo_sistema == "PREPARAR":
-        tema = sys.argv[2] if len(sys.argv) > 2 else input("Tema: ")
-        segundos = int(sys.argv[3]) if len(sys.argv) > 3 else 30
-        modo_gpt = sys.argv[4] if len(sys.argv) > 4 else "normal" 
-        canal_gpt = sys.argv[5] if len(sys.argv) > 5 else "misterio"
-        fase_preparar(tema, segundos, modo_gpt, canal_gpt)
-
-    elif modo_sistema == "MONTAR":
+    
+    cmd = sys.argv[1].upper()
+    if cmd == "PREPARAR":
+        fase_preparar(sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5])
+    elif cmd == "REHACER_AUDIO":
+        fase_reconstruir_audio(sys.argv[2])
+    elif cmd == "MONTAR":
         fase_montar()
-
-    elif modo_sistema == "STATS":
-        fase_estadisticas()
