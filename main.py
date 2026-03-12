@@ -31,11 +31,17 @@ except Exception as e:
 # UTILIDADES
 # ==========================================================
 def obtener_musica_por_canal(canal):
-    folder = os.path.join(MUSIC_DIR, canal.lower())
+    canal_folder = canal.lower().strip()
+    folder = os.path.join(MUSIC_DIR, canal_folder)
+    
     if os.path.exists(folder):
-        archivos = [f for f in os.listdir(folder) if f.endswith(".mp3")]
+        archivos = [f for f in os.listdir(folder) if f.lower().endswith(".mp3")]
         if archivos:
-            return os.path.join(folder, random.choice(archivos))
+            elegida = os.path.join(folder, random.choice(archivos))
+            print(f"🎵 Música seleccionada: {elegida}")
+            return elegida
+    
+    print(f"⚠️ No se encontró música en: {folder}. El video irá sin fondo.")
     return None
 
 def limpiar_nombre_carpeta(nombre):
