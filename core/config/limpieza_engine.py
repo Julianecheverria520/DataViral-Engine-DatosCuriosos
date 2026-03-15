@@ -181,7 +181,35 @@ DICCIONARIO_PRONUNCIACION_ORIGINAL = {
     "traumas": "tráu-mas",
     "esencia": "e-sén-sia",
     "omnipresente": "om-ni-pre-sén-te",
-    "Akáshicos": "a-ká-shi-cos"
+    "Akáshicos": "a-ká-shi-cos",
+    "Fermi": "Fér-mi",
+    "Enrico": "En-rí-ko",
+    "Shor": "Shor",
+    "James Webb": "Yeims Güéb",
+    
+    # Conceptos Cuánticos y Espaciales
+    "qubits": "kiú-bits",
+    "nebula": "né-bu-la",
+    "supernova": "su-per-nó-va",
+    "exoplanetas": "ek-so-pla-né-tas",
+    
+    # Siglas y Otros
+    "RSA": "erre-ese-a",
+    "UHD": "u-ache-de",
+    "NASA": "ná-sa",
+    "AI": "i-a",
+     # Matemáticas y Algoritmos
+    "Fibonacci": "Fi-bo-ná-chi",
+    "áurea": "áurea",
+    "algoritmo": "al-go-rítmo",
+    "ecuación": "e-cua-sión",
+    "cálculo": "cálculo",
+    "hardware": "járgüer",
+    "CPU": "se-pe-ú",
+    "clímax": "clí-maks",
+    "binario": "bi-ná-rio",
+    "redes": "ré-des",
+    "PulsoCurioso": "Púl-so Cu-rió-so", # O 'i-a' si prefieres Inteligencia Artificial
 }
 
 

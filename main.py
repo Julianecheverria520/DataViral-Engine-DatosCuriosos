@@ -4,7 +4,7 @@ import sys
 import re
 import time
 import random
-from core.limpieza_engine import limpiar_texto_para_tts, insertar_pausas_inteligentes
+from core.config.limpieza_engine import limpiar_texto_para_tts, insertar_pausas_inteligentes
 
 # ==========================================================
 # CONFIGURACIÓN GLOBAL
@@ -19,11 +19,11 @@ if ruta_raiz not in sys.path:
     sys.path.insert(0, ruta_raiz)
 
 try:
-    from core.gpt_engine import obtener_guion_y_prompts_visuales
-    from core.auditor_engine import auditar_guion
-    from core.hooks_engine import generar_hook_controlado
-    from core.voice_engine import generar_voz
-    from core.video_editor import crear_video_pro_con_imagenes
+    from core.engines.gpt_engine import obtener_guion_y_prompts_visuales
+    from core.tools.auditor_engine import auditar_guion
+    from core.tools.hooks_engine import generar_hook_controlado
+    from core.engines.voice_engine import generar_voz
+    from core.editors.video_editor import crear_video_pro_con_imagenes
 except Exception as e:
     print(f"❌ Error importando módulos core: {e}"); sys.exit(1)
 

@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 from moviepy.editor import AudioFileClip
-from .limpieza_engine import limpiar_texto_para_tts, corregir_json_subtitulos
+from config.limpieza_engine import limpiar_texto_para_tts, corregir_json_subtitulos
 
 VOZ_POR_DEFECTO = "es-MX-JorgeNeural"
 

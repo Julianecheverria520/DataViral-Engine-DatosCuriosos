@@ -2,7 +2,7 @@ import openai
 import os
 import json
 from dotenv import load_dotenv
-from .hooks_engine import generar_hook_controlado
+from tools.hooks_engine import generar_hook_controlado
 
 load_dotenv()
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
