@@ -4,7 +4,31 @@ import sys
 import re
 import time
 import random
-from core.config.limpieza_engine import limpiar_texto_para_tts, insertar_pausas_inteligentes
+
+# Asegurar que el sistema reconozca la raíz para las importaciones modulares
+ruta_raiz = os.path.dirname(os.path.abspath(__file__))
+if ruta_raiz not in sys.path:
+    sys.path.insert(0, ruta_raiz)
+
+# ==========================================================
+# IMPORTACIONES MODULARES (Actualizadas)
+# ==========================================================
+try:
+    # Usamos la ruta completa desde core
+    from core.config.limpieza_engine import limpiar_texto_para_tts, insertar_pausas_inteligentes
+    from core.engines.gpt_engine import obtener_guion_y_prompts_visuales
+    from core.engines.voice_engine import generar_voz
+    from core.tools.auditor_engine import auditar_guion
+    from core.tools.hooks_engine import generar_hook_controlado
+    from core.editors.video_editor import crear_video_pro_con_imagenes
+    
+    print("✅ Sistema Modular Detectado y Vinculado.")
+except Exception as e:
+    print(f"❌ Error de vinculación: {e}")
+    # Esto te dirá exactamente qué archivo no encuentra
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 
 # ==========================================================
 # CONFIGURACIÓN GLOBAL
@@ -14,21 +38,11 @@ BASE_DIR = "proyectos"
 OUTPUT_DIR = os.path.join("output", "videos")
 MUSIC_DIR = "assets/music" 
 
-ruta_raiz = os.path.dirname(os.path.abspath(__file__))
-if ruta_raiz not in sys.path:
-    sys.path.insert(0, ruta_raiz)
-
-try:
-    from core.engines.gpt_engine import obtener_guion_y_prompts_visuales
-    from core.tools.auditor_engine import auditar_guion
-    from core.tools.hooks_engine import generar_hook_controlado
-    from core.engines.voice_engine import generar_voz
-    from core.editors.video_editor import crear_video_pro_con_imagenes
-except Exception as e:
-    print(f"❌ Error importando módulos core: {e}"); sys.exit(1)
+# Asegurar que existan las carpetas de salida
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==========================================================
-# UTILIDADES
+# UTILIDADES EXISTENTES
 # ==========================================================
 def obtener_musica_por_canal(canal):
     canal_folder = canal.lower().strip()
@@ -121,10 +135,9 @@ def fase_preparar(tema_original, segundos, modo, canal):
     print(f"✅ PROYECTO LISTO: {path}")
 
 # ==========================================================
-# FASE ESPECIAL: RE-HACER AUDIO (SOLO VOZ Y TIMESTAMPS)
+# FASE ESPECIAL: RE-HACER AUDIO
 # ==========================================================
 def fase_reconstruir_audio(nombre_proyecto):
-    """Vuelve a generar el audio.mp3 y timestamps.json usando el guion.json existente."""
     path = os.path.join(BASE_DIR, nombre_proyecto)
     guion_path = os.path.join(path, "guion.json")
 
@@ -146,7 +159,6 @@ def fase_reconstruir_audio(nombre_proyecto):
     audio_path = os.path.join(path, "audio.mp3")
     timestamps_path = os.path.join(path, "timestamps.json")
 
-    # Limpieza de archivos previos
     if os.path.exists(audio_path): os.remove(audio_path)
     if os.path.exists(timestamps_path): os.remove(timestamps_path)
 
@@ -195,6 +207,7 @@ if __name__ == "__main__":
     
     cmd = sys.argv[1].upper()
     if cmd == "PREPARAR":
+        # python main.py PREPARAR "Tema" 35 "profundo" "misterio"
         fase_preparar(sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5])
     elif cmd == "REHACER_AUDIO":
         fase_reconstruir_audio(sys.argv[2])

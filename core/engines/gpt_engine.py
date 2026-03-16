@@ -2,7 +2,18 @@ import openai
 import os
 import json
 from dotenv import load_dotenv
-from tools.hooks_engine import generar_hook_controlado
+
+# AJUSTE DE RUTA MODULAR:
+# Ahora que estamos dentro de core/engines, apuntamos a la nueva ubicación de tools
+try:
+    from core.tools.hooks_engine import generar_hook_controlado
+except ImportError:
+    # Backup por si se ejecuta el archivo de forma aislada
+    import sys
+    ruta_raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if ruta_raiz not in sys.path:
+        sys.path.insert(0, ruta_raiz)
+    from core.tools.hooks_engine import generar_hook_controlado
 
 load_dotenv()
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
