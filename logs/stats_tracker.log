@@ -1,0 +1,18 @@
+2026-03-16 07:59:43,337 - core.tools.stats_tracker - INFO - Base de datos inicializada en database/metricas.db
+2026-03-16 07:59:43,338 - WDM - INFO - ====== WebDriver manager ======
+2026-03-16 07:59:45,301 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2026-03-16 07:59:45,940 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2026-03-16 07:59:46,418 - WDM - INFO - There is no [win64] chromedriver "145.0.7632.117" for browser google-chrome "145.0.7632" in cache
+2026-03-16 07:59:46,418 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2026-03-16 07:59:47,492 - WDM - INFO - WebDriver version 145.0.7632.117 selected
+2026-03-16 07:59:47,525 - WDM - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/145.0.7632.117/win32/chromedriver-win32.zip
+2026-03-16 07:59:47,525 - WDM - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/145.0.7632.117/win32/chromedriver-win32.zip
+2026-03-16 07:59:48,114 - WDM - INFO - Driver downloading response is 200
+2026-03-16 07:59:48,384 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2026-03-16 07:59:49,420 - WDM - INFO - Driver has been saved in cache [C:\Users\julian.echeverria\.wdm\drivers\chromedriver\win64\145.0.7632.117]
+2026-03-16 07:59:52,970 - core.tools.stats_tracker - INFO - Driver de Chrome iniciado correctamente
+2026-03-16 07:59:52,970 - core.tools.stats_tracker - INFO - Trackeando perfil: https://www.youtube.com/@datoscuriososmundo520
+2026-03-16 07:59:56,363 - core.tools.stats_tracker - WARNING - No se encontró el selector de seguidores
+2026-03-16 07:59:56,373 - core.tools.stats_tracker - WARNING - No se encontró el selector de likes totales
+2026-03-16 07:59:56,439 - core.tools.stats_tracker - INFO - Métricas obtenidas: {'fecha': '2026-03-16T07:59:56.351536', 'tipo': 'perfil', 'url': 'https://www.youtube.com/@datoscuriososmundo520', 'seguidores': 0, 'likes_totales': 0, 'vistas_totales': 0, 'comentarios': 0, 'shares': 0, 'metadata': ''}
+2026-03-16 07:59:58,552 - core.tools.stats_tracker - INFO - Driver cerrado

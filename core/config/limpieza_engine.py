@@ -210,6 +210,20 @@ DICCIONARIO_PRONUNCIACION_ORIGINAL = {
     "binario": "bi-ná-rio",
     "redes": "ré-des",
     "PulsoCurioso": "Púl-so Cu-rió-so", # O 'i-a' si prefieres Inteligencia Artificial
+
+    # --- Ciencia y Espacio ---
+        "Voynich": "vóinich",
+        "Rayleigh": "reili",
+        "Zeno": "zenon",
+        "Quarks": "cuarks",
+        "HeLa": "jela",
+        
+        # --- Unidades y Números ---
+        "kg": "kilos",
+        "km": "kilómetros",
+        "8k": "ocho ka",
+        "4k": "cuatro ka",
+        "3 de marzo": "tres de marzo",
 }
 
 

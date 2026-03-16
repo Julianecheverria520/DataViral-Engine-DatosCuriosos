@@ -30,10 +30,10 @@ def insertar_popup_suscripcion(elementos_video, duracion_total, width, height):
         # 4. POSICIONAMIENTO Y TAMAÑO
         video_sub = (video_sub.set_start(tiempo_inicio)
                     .set_duration(4) # Duración ideal para ver el movimiento y el clic
-                    .resize(width=520) # Tamaño con buen impacto visual
+                    .resize(width=590) # Tamaño con buen impacto visual
                     # POSICIÓN ELEVADA: 'height - 950' lo ubica en la zona central-alta.
                     # Esto evita CUALQUIER solapamiento con subtítulos o la barra neón.
-                    .set_position(("center", height - 950)))
+                    .set_position(("center", height - 900)))
 
         elementos_video.append(video_sub)
         print("   ✅ Pop-up 'PulsoCurioso' listo en la capa superior.")
