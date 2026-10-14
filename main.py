@@ -202,7 +202,7 @@ def fase_montar():
 # ==========================================================
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python main.py [PREPARAR | MONTAR | REHACER_AUDIO]")
+        print("Uso: python main.py [PREPARAR | MONTAR | REHACER_AUDIO | SUBIR]")
         sys.exit(0)
     
     cmd = sys.argv[1].upper()
@@ -213,3 +213,13 @@ if __name__ == "__main__":
         fase_reconstruir_audio(sys.argv[2])
     elif cmd == "MONTAR":
         fase_montar()
+    elif cmd == "SUBIR":
+        # python main.py SUBIR [private|unlisted|public] [--proyecto NOMBRE] [--simular]
+        from core.tools.youtube_uploader import fase_subir
+        args = sys.argv[2:]
+        simular = "--simular" in args
+        proyecto = args[args.index("--proyecto") + 1] if "--proyecto" in args else None
+        posicionales = [a for i, a in enumerate(args)
+                        if not a.startswith("--") and (i == 0 or args[i - 1] != "--proyecto")]
+        privacidad = posicionales[0].lower() if posicionales else "private"
+        fase_subir(privacidad=privacidad, proyecto=proyecto, simular=simular)

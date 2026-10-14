@@ -15,3 +15,7 @@ temp-audio.m4a
 # VS Code u otros editores
 .vscode/
 .idea/
+
+# Credenciales de YouTube (nunca subir al repo)
+credentials/
+client_secret*.json
