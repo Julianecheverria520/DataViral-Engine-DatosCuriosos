@@ -10,6 +10,13 @@ ruta_raiz = os.path.dirname(os.path.abspath(__file__))
 if ruta_raiz not in sys.path:
     sys.path.insert(0, ruta_raiz)
 
+# STATS solo necesita la API de YouTube: se resuelve antes de cargar los motores de video/IA
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1].upper() == "STATS":
+    from core.tools.youtube_stats import rastrear_estadisticas
+    # python main.py STATS [@canal_o_ID]
+    resultado = rastrear_estadisticas(sys.argv[2] if len(sys.argv) > 2 else None)
+    sys.exit(0 if resultado else 1)
+
 # ==========================================================
 # IMPORTACIONES MODULARES (Actualizadas)
 # ==========================================================
@@ -202,7 +209,7 @@ def fase_montar():
 # ==========================================================
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python main.py [PREPARAR | MONTAR | REHACER_AUDIO]")
+        print("Uso: python main.py [PREPARAR | MONTAR | REHACER_AUDIO | STATS]")
         sys.exit(0)
     
     cmd = sys.argv[1].upper()
