@@ -1,4 +1,6 @@
 @echo off
-echo --- 📊 CONSULTANDO RENDIMIENTO DEL CANAL ---
+title InsightdataMind - Estadisticas del canal
+call venv\Scripts\activate
+echo --- CONSULTANDO RENDIMIENTO DEL CANAL DE YOUTUBE ---
 python main.py STATS
 pause
