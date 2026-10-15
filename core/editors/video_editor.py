@@ -17,7 +17,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 # ==========================================================
 # CONFIGURACIÓN DE RUTAS
 # ==========================================================
-FFMPEG_PATH = r"C:\ffmpeg\bin\ffmpeg.exe"
+FFMPEG_PATH = os.getenv("FFMPEG_PATH", r"C:\ffmpeg\bin\ffmpeg.exe")
 MAGICK_PATH = r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
 
 if os.path.exists(FFMPEG_PATH):

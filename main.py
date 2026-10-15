@@ -10,6 +10,11 @@ ruta_raiz = os.path.dirname(os.path.abspath(__file__))
 if ruta_raiz not in sys.path:
     sys.path.insert(0, ruta_raiz)
 
+# La ruta de ffmpeg se lee del .env (FFMPEG_PATH) antes de cargar MoviePy
+from dotenv import load_dotenv
+load_dotenv()
+os.environ["IMAGEIO_FFMPEG_EXE"] = os.getenv("FFMPEG_PATH", r"C:\ffmpeg\bin\ffmpeg.exe")
+
 # ==========================================================
 # IMPORTACIONES MODULARES (Actualizadas)
 # ==========================================================
@@ -33,7 +38,6 @@ except Exception as e:
 # ==========================================================
 # CONFIGURACIÓN GLOBAL
 # ==========================================================
-os.environ["IMAGEIO_FFMPEG_EXE"] = r"C:\ffmpeg\bin\ffmpeg.exe"
 BASE_DIR = "proyectos"
 OUTPUT_DIR = os.path.join("output", "videos")
 MUSIC_DIR = "assets/music" 
@@ -49,7 +53,7 @@ def obtener_musica_por_canal(canal):
     folder = os.path.join(MUSIC_DIR, canal_folder)
     
     if os.path.exists(folder):
-        archivos = [f for f in os.listdir(folder) if f.lower().endswith(".mp3")]
+        archivos = [f for f in os.listdir(folder) if f.lower().endswith((".mp3", ".m4a"))]
         if archivos:
             elegida = os.path.join(folder, random.choice(archivos))
             print(f"🎵 Música seleccionada: {elegida}")
