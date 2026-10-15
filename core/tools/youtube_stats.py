@@ -20,7 +20,12 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 
+RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(RAIZ, ".env"))
 load_dotenv()
+
+# Nombres aceptados para la clave en el .env (el primero que exista)
+NOMBRES_CLAVE = ["YOUTUBE_API_KEY", "YT_API_KEY", "YOUTUBE_KEY", "API_KEY_YOUTUBE", "YOUTUBE_DATA_API_KEY", "GOOGLE_API_KEY"]
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -174,10 +179,11 @@ def _guardar_csv(fecha, canal, videos):
 # ============================================================
 
 def rastrear_estadisticas(canal=None, max_videos=50):
-    api_key = os.getenv("YOUTUBE_API_KEY")
+    api_key = next((os.getenv(n) for n in NOMBRES_CLAVE if os.getenv(n)), None)
     canal = canal or os.getenv("YOUTUBE_CHANNEL") or CANAL_POR_DEFECTO
     if not api_key:
-        print("❌ Falta YOUTUBE_API_KEY en el archivo .env")
+        print(f"❌ No encontré la clave de YouTube en {os.path.join(RAIZ, '.env')}")
+        print(f"   Nombres que busco: {', '.join(NOMBRES_CLAVE)}")
         print("   Créala en https://console.cloud.google.com/apis/credentials (habilita 'YouTube Data API v3').")
         return None
 
