@@ -15,3 +15,7 @@ temp-audio.m4a
 # VS Code u otros editores
 .vscode/
 .idea/
+
+# Logs y base de métricas locales
+logs/
+database/
